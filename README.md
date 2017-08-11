@@ -2,7 +2,7 @@
 Basic scripts for Moodle integration with nbgrader (configured for UoG)
 
 ## To import students from Moodle 
-* Step 1. Export names from the grade book (Gradebook/export/plain text)
+* Export names from the grade book (Gradebook/export/plain text)
 
         python import_classlist.py <csvfile>
 
@@ -11,7 +11,7 @@ Basic scripts for Moodle integration with nbgrader (configured for UoG)
 * From Moodle, select assignment
 * View All Submissions
 * Choose "Download All Submissions" from top dropdown (MAKE SURE "Download submissions in folders" is OFF)
-* Copy archive into downloaded\<assignment_name>\archive\
+* Copy archive into `downloaded\<assignment_name>\archive\`
 
         nbgrader zip_collect <assignment_name>
 
@@ -33,6 +33,6 @@ Basic scripts for Moodle integration with nbgrader (configured for UoG)
 
         python update_gradesheet.csv <assignment_name> <exported_gradesheet.csv>
 
-* Upload exports/<assign>_feedback.zip to Moodle (as the feedback) and exports/<assign>_marks.csv to Moodle (as the gradesheet)
+* Upload `exports/<assignment_name>_feedback.zip` to Moodle (as the feedback) and `exports/<assignment_name>_marks.csv` to Moodle (as the gradesheet)
 
 

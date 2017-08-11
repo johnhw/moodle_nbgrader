@@ -1,7 +1,7 @@
 import os, shutil
 
 if __name__=="__main__":
-    if len(sys.args)!=2:
+    if len(sys.argv)!=2:
         print("""
         Usage:
         

@@ -14,11 +14,13 @@ def import_moodle(csvfile):
             name, surname, matric, email = line['First name'], line['Surname'], line['ID number'], line['Email address']                                
             unique_id = "{0} {1}".format(name, surname) # moodle unique ID
             print("Adding {0}".format(unique_id))
-            gradebook.update_or_create_student(unique_id, first_name=name, last_name=surname, email=email)
+            
+            # store the matric as the last name, as we can't get this otherwise
+            gradebook.update_or_create_student(unique_id, first_name=name, last_name=matric, email=email)
 
                 
 if __name__=="__main__":
-     if len(sys.args!=2):
+     if len(sys.argv)!=2:
             print("""
             Usage:
             

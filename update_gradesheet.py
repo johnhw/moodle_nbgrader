@@ -67,7 +67,7 @@ def moodle_gradesheet(assignment, csvfile, with_feedback=True):
                 
         
 if __name__=="__main__":
-    if len(sys.args!=3):
+    if len(sys.argv)!=3:
             print("""
             Usage:
             

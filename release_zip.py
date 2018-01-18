@@ -1,4 +1,5 @@
 import os, shutil
+import sys
 
 if __name__=="__main__":
     if len(sys.argv)!=2:
@@ -12,8 +13,10 @@ if __name__=="__main__":
         """)
         exit(-1)
         
-    assign = sys.args[1]
+    assign = sys.argv[1]
     fullpath = os.path.join('release',assign)
     if os.path.isdir(fullpath):
-        shutil.make_archive('upload/%s' % file, 'zip', fullpath, verbose=True)        
+        print("Creating archive upload/%s.zip" % assign)
+        shutil.make_archive('upload/%s' % assign, 'zip', fullpath, verbose=True)        
+    shutil.unpack_archive('upload/%s.zip' % assign, 'tests/%s'%assign)
     

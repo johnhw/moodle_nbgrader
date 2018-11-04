@@ -1,83 +1,95 @@
 import nbgrader, csv, codecs, sys, os, shutil
 from nbgrader.apps import NbGraderAPI
-
-def unicode_csv_dictreader(path, *args, **kwargs):
-    "create a csv dict reader that copes with encoding correctly"
-    # utf-8-sig strips off a BOM if it's present
-    stream = codecs.open(path, encoding='utf-8-sig')
-    return UnicodeCSVDictReader(stream, *args, **kwargs)
-
-class UnicodeCSVDictReader(csv.DictReader):
-    def __init__(self, unicode_csvfile, *args, **kwargs):
-        decoder = codecs.getdecoder('utf-8')
-        self.decoder = lambda v: decoder(v)[0]
-        utf8_csvfile = codecs.iterencode(unicode_csvfile, encoding='utf-8')
-        # bollicks to csv.DictReader being an oldstyle class
-        csv.DictReader.__init__(self, utf8_csvfile, *args, **kwargs)
-        self.fieldnames = [self.decoder(f) for f in self.fieldnames] 
-
-    def next(self):
-        data = csv.DictReader.next(self)
-        return {k: self.decoder(v) for (k,v) in data.iteritems()}
-
-
+import zipfile
+verbose = False
 def zip(out, root):
     shutil.make_archive(out, 'zip', root)
 
-def moodle_gradesheet(assignment, csvfile, with_feedback=True):    
+def moodle_gradesheet(assignment, with_feedback=True):    
     
     api = NbGraderAPI()
     gradebook = api.gradebook        
-    reader = unicode_csv_dictreader(csvfile)    
-    fname =    "exports/{0}_gradesheet.csv".format(assignment)
+    csvfile = os.path.join("imports", assignment+".csv")
+    with open(csvfile, newline='', encoding='utf-8-sig') as f:
+        reader = csv.DictReader(f) 
     
-    if with_feedback:
-        try:
-            os.mkdir("exports/%s" % assignment)
-        except OSError:
-            print("Directory already exists")
-            
-    
-    with open(fname, 'wb') as out:
-        writer = csv.DictWriter(out, reader.fieldnames)
-        writer.writeheader()
-        for line in reader:        
-            ident, fullname, status, grade, max_grade = line['Identifier'], line['Full name'], line['Status'], line['Grade'], line['Maximum Grade']                        
-            try:
-                submission = gradebook.find_submission(assignment, fullname)                
-            except:
-                print("\tNo submission for {0} in assignment {1}".format(fullname,assignment))
-            else:
-                print("\tProcessing submission for {0} in assignment {1}".format(fullname,assignment))
-                if with_feedback:
-                    ident = ident[12:]
-                    
-                    # zip into correct filenaming format
-                    zip("exports/{2}/{1}_{0}_assignsubmission_file_{2}_feedback".format(ident, fullname, assignment),  "feedback/{1}/{2}".format(ident, fullname, assignment))
-                    print("\t\tFeedback generated...")
-            
-                line['Grade'] = submission.score
-                line['Maximum Grade'] = submission.max_score
-                writer.writerow(line)
-            
-        print("Wrote to {0}".format(fname))
+        fname =  os.path.join("exports", assignment+".csv")
+        
         if with_feedback:
-              zip("exports/{0}_feedback".format(assignment),  "exports/{0}".format(assignment))
-              print("Created feedback zip file {0}.zip".format(assignment))
+            archive = zipfile.ZipFile(os.path.join("exports", "feedback_"+assignment+".zip"), 'w', zipfile.ZIP_DEFLATED)
                 
         
+        with open(fname, 'w', encoding='utf-8', newline='') as out:
+            writer = csv.DictWriter(out, reader.fieldnames)
+            writer.writeheader()
+            for line in reader:        
+                email, ident, fullname, status, grade, max_grade = line["Email address"], line['Identifier'], line['Full name'], line['Status'], line['Grade'], line['Maximum Grade']                        
+                unique_id = email[0:7]
+                try:
+                    submission = gradebook.find_submission(assignment, unique_id)                
+                except:
+                    if "Submitted" in status:
+                        print("WARNING: No submission for {id} in assignment {assign}".format(id=unique_id ,assign=assignment))
+                    else:
+                        if verbose:
+                            print("\tNo submission for {id} in assignment {assign}, as expected".format(id=unique_id, assign=assignment))
+                else:
+                    if verbose:
+                        print("\tProcessing submission for {id} in assignment {assign}".format(id=unique_id, assign=assignment))
+
+
+                    fbk_path = os.path.join("feedback", unique_id, assignment)
+                    
+                    try:                    
+                        
+                        files = [os.path.join(fbk_path, f) for f in os.listdir(fbk_path) if f.endswith('.html')]
+                        
+                        assign_id = ident[-7:]
+                        # remove asterisks
+                        name = 'blank'
+                        
+                        # create the path to the feedback file
+                        fbk_full_path = "{fullname}_{assign_id}_assignsubmission_file_".format(fullname=name, 
+                            assign_id=assign_id)
+                        for f in files:
+                            archive.write(f, arcname=os.path.join(fbk_full_path, os.path.basename(f)))
+                        
+                    except FileNotFoundError:
+                        print("HTML feedback file for {fullname} {id} {assign} is missing".format(id=unique_id,
+                        fullname=fullname, assign=assignment))
+                        # no feedback to generate
+                
+                    line['Grade'] = submission.score
+
+                    # warn about dubious scores
+                    if line['Grade']<=0 or line['Grade']>submission.max_score:
+                        print("Warning: {matric} {name} has a score of {grade}".format(matric=unique_id,
+                        name=fullname, grade=line['Grade']))
+
+                    # correct the maximum grade
+                    line['Maximum Grade'] = submission.max_score
+                    writer.writerow(line)
+                
+            print("Wrote to {0}".format(fname))
+
+            # tidy up the feedback file
+            if with_feedback:
+                archive.close()
+                    
+            
 if __name__=="__main__":
-    if len(sys.argv)!=3:
+    if len(sys.argv)!=2:
             print("""
             Usage:
             
-                update_gradesheet.py <assign> <csvfile>
+                update_gradesheet.py <assign> 
                 
             Updates a CSV file gradesheet (which must have be downloaded from
             Moodle with "offline gradesheets" enabled in the assignment settings) with
             the results from grading the assignment <assign>.
             
-            The output will be in exports/<assign>_gradesheet.csv
+            The input will be imports/<assign>.csv
+            The output will be in exports/<assign>.csv
             
             Feedback will be zipped up into the file exports/<assign>_feedback.zip and this
             can be uploaded to Moodle if "Feedback files" is enabled. This uploads all student
@@ -86,7 +98,7 @@ if __name__=="__main__":
             """)
             exit(-1)
     
-    assignment, csvfile = sys.argv[1], sys.argv[2]
+    assignment= sys.argv[1]
     print("Updating gradesheet for {0}...".format(assignment))
-    moodle_gradesheet(assignment, csvfile)
+    moodle_gradesheet(assignment)
     

@@ -51,7 +51,12 @@ def moodle_gradesheet(notebook_name, assign_name, csvfile, zip):
                 
             # map assignment numbers to matric numbers
             matric = email[0:7]
-            ident = ident[-7:]
+            match = re.match('Participant ([0-9]+)', ident)
+            if not match:
+                print(f"Could not find identity for participant {ident}")
+                continue
+            
+            ident = match.groups()[0]
             assign_matric[ident] = matric
             
             n_rows += 1

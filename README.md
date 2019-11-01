@@ -1,13 +1,15 @@
 
 
 ## Submissions
+Assuming you have an assignment called `<assignment>` (e.g. `week_2_numerical_ii`)
+
 1. From Moodle, select assignment
 2. `View All Submissions`
 3. `Reveal student identities`
 4. Choose `Download All Submissions` from top dropdown (MAKE SURE `Download submissions in folders` is OFF)
-5. Copy archive to `exports/<assignment>.zip`
+5. Copy archive to `imports/<assignment>.zip`
 6. Choose `Download grading worksheet`
-5. Copy CSV to `exports/<assignment>.csv`
+5. Copy CSV to `imports/<assignment>.csv`
 
         python collect_files.py <assignment> <workbook_name>
 
@@ -18,7 +20,7 @@ Example:
 
 Run:
 
-        nbgrader autograder <assignment>
+        nbgrader autograde <assignment>
 
 to grade the files
 
